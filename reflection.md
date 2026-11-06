@@ -5,7 +5,16 @@
 **a. Initial design**
 
 - Briefly describe your initial UML design.
+
+My initial UML design has four classes: `Owner`, `Pet`, `Task`, and `Scheduler`. The first three hold the data, and the `Scheduler` holds the planning logic. An `Owner` has one or more `Pet`s, and each `Pet` has zero or more `Task`s (both are composition: if a pet is removed, its tasks go with it). The `Scheduler` keeps a reference to one `Owner` and depends on `Task`. It doesn't own any tasks; it collects them from the owner's pets each time it builds a plan.
+
 - What classes did you include, and what responsibilities did you assign to each?
+
+- **Owner**: stores the owner's name, how many minutes they have for pet care that day (`available_minutes`), their preferences, and their list of pets. It is responsible for managing pets (`add_pet`, `remove_pet`, `get_pets`).
+- **Pet**: stores the pet's name, species, age, any special needs, and its list of care tasks. It is responsible for managing its own tasks (`add_task`, `remove_task`, `get_tasks`).
+- **Task**: represents one care activity with a title, duration in minutes, priority (low, medium, or high), category (walk, feeding, meds, and so on), and whether it is completed. It is responsible for updating itself (`mark_complete`, `edit`) and for turning its priority into a number (`priority_value`) so tasks can be sorted.
+- **Scheduler**: takes an owner and a day start time and builds the daily plan. It gathers tasks from all pets (`collect_tasks`), orders them by priority and then duration (`sort_tasks`), drops tasks that don't fit in the available time (`filter_tasks`), assigns start times (`generate_plan`), and explains why each task was scheduled or skipped (`explain_plan`). It stores the result as a list of `(start_time, task)` pairs in `plan` and the left-out tasks in `skipped`.
+
 
 **b. Design changes**
 

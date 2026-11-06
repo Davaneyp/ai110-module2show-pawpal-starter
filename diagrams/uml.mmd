@@ -1,0 +1,59 @@
+classDiagram
+    %% Keep this file updated so it matches your final implementation.
+
+    class Owner {
+        +str name
+        +int available_minutes
+        +dict preferences
+        +list~Pet~ pets
+        +add_pet(pet: Pet) None
+        +remove_pet(pet_name: str) None
+        +find_pet(pet_name: str) Pet
+        +get_pets() list~Pet~
+        +get_all_tasks() list~Task~
+    }
+
+    class Pet {
+        +str name
+        +str species
+        +int age
+        +list~str~ special_needs
+        +list~Task~ tasks
+        +add_task(task: Task) None
+        +remove_task(description: str) None
+        +find_task(description: str) Task
+        +get_tasks() list~Task~
+    }
+
+    class Task {
+        +str description
+        +int duration_minutes
+        +str priority
+        +str frequency
+        +str category
+        +str time
+        +bool completed
+        +mark_complete() None
+        +reset() None
+        +priority_value() int
+        +edit(description, duration_minutes, priority, frequency, category) None
+    }
+
+    class Scheduler {
+        +Owner owner
+        +str day_start
+        +list~tuple~ plan
+        +list~Task~ skipped
+        +collect_tasks() list~Task~
+        +sort_tasks(tasks: list~Task~) list~Task~
+        +filter_tasks(tasks: list~Task~) list~Task~
+        +generate_plan() list~tuple~
+        +complete_task(pet_name: str, description: str) None
+        +reset_recurring_tasks() None
+        +explain_plan() str
+    }
+
+    Owner "1" *-- "1..*" Pet : owns
+    Pet "1" *-- "0..*" Task : needs
+    Scheduler "1" --> "1" Owner : plans for
+    Scheduler ..> Task : schedules
