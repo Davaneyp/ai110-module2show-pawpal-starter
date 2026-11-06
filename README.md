@@ -81,19 +81,39 @@ Skipped (not enough time left):
 
 ## 🧪 Testing PawPal+
 
-```bash
-# Run the full test suite:
-pytest
+Run the full test suite from the project folder:
 
-# Run with coverage:
-pytest --cov
+```bash
+python -m pytest
 ```
+
+The tests live in [`tests/test_pawpal.py`](tests/test_pawpal.py). Every test uses a fixed date, so results don't depend on the day you run them. They cover:
+
+- **Sorting:** `sort_by_time()` returns tasks in clock order, puts untimed tasks last, keeps ties in their original order, and leaves the input list unchanged. `sort_tasks()` orders by priority, then shortest first. The finished plan is in start-time order.
+- **Recurring tasks:** completing a daily task adds a copy due the next day, a weekly task adds one due 7 days later, and a one-time task adds nothing. Tasks finished early count from their due date and overdue tasks count from today. The finished task stays as history, and the next copy doesn't show up in today's plan.
+- **Conflict detection:** two tasks at the same time are flagged, for the same pet ("both for Mochi") or different pets ("Mochi and Rex"). Partial overlaps are flagged, back-to-back tasks are not, and flexible tasks move to just after a fixed task instead of clashing with it.
+- **Time budget and planning:** a task that exactly fills the remaining time is kept, a zero budget skips everything, and a long task that doesn't fit doesn't block shorter tasks after it. Completed and future tasks are left out of the plan; overdue tasks are included.
+- **Input checks:** bad durations, priorities, frequencies, and times raise `ValueError`. A failed `edit()` puts the old values back, and duplicate pet names are rejected.
 
 Sample test output:
 
 ```
-# Paste your pytest output here
+============================= test session starts =============================
+platform win32 -- Python 3.13.13, pytest-9.1.1, pluggy-1.7.0
+rootdir: C:\Users\Light\OneDrive\Documents\GitHub\ai110-module2show-pawpal-starter
+plugins: anyio-4.15.1
+collected 35 items
+
+tests\test_pawpal.py ..................................x                 [100%]
+
+======================== 34 passed, 1 xfailed in 0.08s ========================
 ```
+
+The one `x` is an expected failure (`xfail`) that records a known bug. If a plan runs past midnight, a flexible task's start time wraps to `"00:xx"` and sorts to the top of the plan. The test will start passing once `generate_plan()` handles that case.
+
+**Confidence Level: ★★★★☆ (4/5)**
+
+All the core behaviors (sorting, recurring tasks, conflict detection, and the time budget) pass, including their edge cases. I'm holding back one star for the known midnight bug, and because the Streamlit UI in `app.py` isn't covered by automated tests.
 
 ## 📐 Smarter Scheduling
 
