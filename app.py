@@ -112,6 +112,11 @@ else:
             category = st.selectbox(
                 "Category", ["walk", "feeding", "meds", "enrichment", "grooming", "general"]
             )
+        col6, col7 = st.columns(2)
+        with col6:
+            has_fixed_time = st.checkbox("Must happen at a set time")
+        with col7:
+            fixed_time = st.time_input("Set time", value=time(8, 0), step=300)
         if st.form_submit_button("Add task"):
             try:
                 owner.find_pet(task_pet).add_task(
@@ -121,6 +126,7 @@ else:
                         priority=priority,
                         frequency=frequency,
                         category=category,
+                        time=fixed_time.strftime("%H:%M") if has_fixed_time else None,
                     )
                 )
                 st.success(f"Added '{description}' for {task_pet}.")
@@ -138,11 +144,37 @@ else:
                     "duration (min)": t.duration_minutes,
                     "priority": t.priority,
                     "frequency": t.frequency,
+                    "due": t.due_date.isoformat(),
                     "done": "✅" if t.completed else "",
                 }
                 for p, t in all_tasks
             ]
         )
+
+        unfinished = [(p, t) for p, t in all_tasks if not t.completed]
+        if unfinished:
+            with st.form("complete_task"):
+                choice = st.selectbox(
+                    "Mark a task done",
+                    range(len(unfinished)),
+                    format_func=lambda i: (
+                        f"{unfinished[i][1].description} ({unfinished[i][0].name}, "
+                        f"due {unfinished[i][1].due_date})"
+                    ),
+                )
+                if st.form_submit_button("Mark done"):
+                    pet, task = unfinished[choice]
+                    next_task = pet.complete_task(task.description)
+                    message = f"Done: '{task.description}'."
+                    if next_task is not None:
+                        message += (
+                            f" Next {next_task.frequency} copy added, due {next_task.due_date}."
+                        )
+                    # Rerun so the table above shows the change; keep the message for it.
+                    st.session_state.done_message = message
+                    st.rerun()
+        if "done_message" in st.session_state:
+            st.success(st.session_state.pop("done_message"))
     else:
         st.info("No tasks yet. Add one above.")
 
@@ -171,6 +203,9 @@ if st.button("Generate schedule"):
         )
     else:
         st.warning("Nothing could be scheduled. Add tasks or increase your available minutes.")
+
+    for warning in scheduler.conflicts:
+        st.warning(warning, icon="⚠️")
 
     if scheduler.skipped:
         st.warning(

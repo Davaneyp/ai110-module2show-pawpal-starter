@@ -33,7 +33,12 @@ My initial UML design has four classes: `Owner`, `Pet`, `Task`, and `Scheduler`.
 **b. Tradeoffs**
 
 - Describe one tradeoff your scheduler makes.
+
+When two tasks with fixed times overlap, my scheduler only warns about it; it does not fix it. `detect_conflicts()` checks whether the time ranges overlap (start + duration), not just whether two tasks start at the same minute. For example, it catches a 15-minute puzzle feeder at 07:35 that runs into a 07:30 breakfast. But it never moves, shortens, or drops either task. It adds a message such as *"'Give medication' (08:00-08:05) overlaps 'Morning walk' (08:00-08:30), Luna and Mochi"* to `scheduler.conflicts`, keeps both tasks in the plan, and leaves the decision to the owner. Flexible tasks (ones with no set time) are the only ones the scheduler moves, and it places them in the open gaps around the fixed ones.
+
 - Why is that tradeoff reasonable for this scenario?
+
+A fixed time usually means something real, like a vet appointment or a medication that has to be given at 08:00, and the scheduler doesn't know which of two clashing tasks matters more in real life. Some overlaps are not even problems: one person can often feed two pets at once, or give a cat its pill while the dog is eating. If the scheduler moved a fixed task on its own, it could quietly push medication to the wrong time, which is worse than showing a warning. Returning a warning instead of raising an error also means one clash never stops the rest of the day from being planned. The cost is that the plan the owner sees can contain overlaps until they fix them by hand.
 
 ---
 
