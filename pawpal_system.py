@@ -222,7 +222,7 @@ class Scheduler:
         ]
         for start, task in self.plan:
             lines.append(
-                f"  {start} - {task.description} for {self._pet_name_for(task)} "
+                f"  {start} - {task.description} for {self.pet_name_for(task)} "
                 f"({task.duration_minutes} min) [priority: {task.priority}]"
             )
         lines.append(
@@ -233,12 +233,12 @@ class Scheduler:
             lines.append("Skipped (not enough time left):")
             for task in self.skipped:
                 lines.append(
-                    f"  {task.description} for {self._pet_name_for(task)} "
+                    f"  {task.description} for {self.pet_name_for(task)} "
                     f"({task.duration_minutes} min) [priority: {task.priority}]"
                 )
         return "\n".join(lines)
 
-    def _pet_name_for(self, task: Task) -> str:
+    def pet_name_for(self, task: Task) -> str:
         """Return the name of the pet that owns this task."""
         for pet in self.owner.pets:
             if any(t is task for t in pet.tasks):

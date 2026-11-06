@@ -51,6 +51,7 @@ classDiagram
         +complete_task(pet_name: str, description: str) None
         +reset_recurring_tasks() None
         +explain_plan() str
+        +pet_name_for(task: Task) str
     }
 
     Owner "1" *-- "1..*" Pet : owns
