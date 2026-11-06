@@ -1,4 +1,4 @@
-from datetime import time
+from datetime import datetime, time, timedelta
 
 import streamlit as st
 
@@ -136,20 +136,43 @@ else:
     all_tasks = [(p, t) for p in owner.get_pets() for t in p.get_tasks()]
     if all_tasks:
         st.write("Current tasks:")
-        st.table(
-            [
-                {
-                    "pet": p.name,
-                    "description": t.description,
-                    "duration (min)": t.duration_minutes,
-                    "priority": t.priority,
-                    "frequency": t.frequency,
-                    "due": t.due_date.isoformat(),
-                    "done": "✅" if t.completed else "",
-                }
-                for p, t in all_tasks
-            ]
+        task_view = Scheduler(owner)
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            pet_filter = st.selectbox("Show pet", ["All pets"] + [p.name for p in pets])
+        with col2:
+            status_filter = st.selectbox("Show status", ["All", "To do", "Done"])
+        with col3:
+            sort_order = st.selectbox("Sort by", ["Time of day", "Priority"])
+
+        shown = task_view.filter_tasks(
+            pet_name=None if pet_filter == "All pets" else pet_filter,
+            completed={"All": None, "To do": False, "Done": True}[status_filter],
         )
+        if sort_order == "Time of day":
+            shown = task_view.sort_by_time(shown)
+        else:
+            shown = task_view.sort_tasks(shown)
+
+        if shown:
+            st.table(
+                [
+                    {
+                        "time": t.time or "flexible",
+                        "pet": task_view.pet_name_for(t),
+                        "description": t.description,
+                        "duration (min)": t.duration_minutes,
+                        "priority": t.priority,
+                        "frequency": t.frequency,
+                        "due": t.due_date.isoformat(),
+                        "done": "✅" if t.completed else "",
+                    }
+                    for t in shown
+                ]
+            )
+            st.caption(f"Showing {len(shown)} of {len(all_tasks)} tasks.")
+        else:
+            st.info("No tasks match these filters.")
 
         unfinished = [(p, t) for p, t in all_tasks if not t.completed]
         if unfinished:
@@ -188,15 +211,26 @@ if st.button("Generate schedule"):
     plan = scheduler.generate_plan()
 
     if plan:
-        st.success(f"Today's schedule for {owner.name}")
+        used = sum(task.duration_minutes for _, task in plan)
+        col1, col2, col3 = st.columns(3)
+        col1.metric("Tasks scheduled", len(plan))
+        col2.metric("Minutes used", f"{used} / {owner.available_minutes}")
+        col3.metric("Conflicts", len(scheduler.conflicts))
+
+        st.success(f"Today's schedule for {owner.name}, in start-time order")
         st.table(
             [
                 {
-                    "time": start,
+                    "start": start,
+                    "end": (
+                        datetime.strptime(start, "%H:%M")
+                        + timedelta(minutes=task.duration_minutes)
+                    ).strftime("%H:%M"),
                     "task": task.description,
                     "pet": scheduler.pet_name_for(task),
                     "duration (min)": task.duration_minutes,
                     "priority": task.priority,
+                    "timing": "set time" if task.time else "flexible",
                 }
                 for start, task in plan
             ]
@@ -204,13 +238,33 @@ if st.button("Generate schedule"):
     else:
         st.warning("Nothing could be scheduled. Add tasks or increase your available minutes.")
 
-    for warning in scheduler.conflicts:
-        st.warning(warning, icon="⚠️")
+    if scheduler.conflicts:
+        st.markdown("#### ⚠️ Time conflicts")
+        st.caption(
+            "These set-time tasks overlap. Both stay in the plan; change one task's time "
+            "if they can't happen together."
+        )
+        for warning in scheduler.conflicts:
+            st.warning(warning)
+    elif plan:
+        st.success("No time conflicts. Every task has its own slot.")
 
     if scheduler.skipped:
+        st.markdown("#### Skipped (not enough time)")
         st.warning(
-            "Skipped (not enough time): "
-            + ", ".join(f"{t.description} ({t.duration_minutes} min)" for t in scheduler.skipped)
+            f"{len(scheduler.skipped)} task(s) didn't fit in {owner.available_minutes} minutes. "
+            "Higher-priority tasks claimed the time first."
+        )
+        st.table(
+            [
+                {
+                    "task": t.description,
+                    "pet": scheduler.pet_name_for(t),
+                    "duration (min)": t.duration_minutes,
+                    "priority": t.priority,
+                }
+                for t in scheduler.skipped
+            ]
         )
 
     with st.expander("Why this plan?"):

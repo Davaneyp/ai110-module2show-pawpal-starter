@@ -1,0 +1,75 @@
+classDiagram
+    %% Final design: matches pawpal_system.py.
+    %% Module constants: PRIORITY_VALUES, FREQUENCIES, REPEAT_INTERVALS.
+
+    class Owner {
+        +str name
+        +int available_minutes
+        +dict preferences
+        +list~Pet~ pets
+        +add_pet(pet: Pet) None
+        +remove_pet(pet_name: str) None
+        +find_pet(pet_name: str) Optional~Pet~
+        +get_pets() list~Pet~
+        +get_all_tasks() list~Task~
+    }
+
+    class Pet {
+        +str name
+        +str species
+        +int age
+        +list~str~ special_needs
+        +list~Task~ tasks
+        +add_task(task: Task) None
+        +remove_task(description: str) None
+        +find_task(description: str) Optional~Task~
+        +complete_task(description: str, today: date) Optional~Task~
+        +get_tasks() list~Task~
+    }
+
+    class Task {
+        <<dataclass>>
+        +str description
+        +int duration_minutes
+        +str priority
+        +str frequency
+        +str category
+        +Optional~str~ time
+        +bool completed
+        +date due_date
+        -_validate() None
+        +mark_complete() None
+        +reset() None
+        +next_occurrence(today: date) Optional~Task~
+        +priority_value() int
+        +edit(description, duration_minutes, priority, frequency, category) None
+    }
+
+    class Scheduler {
+        +Owner owner
+        +str day_start
+        +date plan_date
+        +list~tuple~ plan
+        +list~Task~ skipped
+        +list~str~ conflicts
+        +collect_tasks() list~Task~
+        +sort_tasks(tasks: list~Task~) list~Task~
+        +sort_by_time(tasks: list~Task~) list~Task~
+        +filter_tasks(pet_name: str, completed: bool) list~Task~
+        +fit_to_budget(tasks: list~Task~) list~Task~
+        +generate_plan() list~tuple~
+        +detect_conflicts() list~str~
+        +complete_task(pet_name: str, description: str) Optional~Task~
+        +explain_plan() str
+        +pet_name_for(task: Task) str
+    }
+
+    note for Scheduler "plan holds (start 'HH:MM', Task) pairs in start-time order"
+    note for Task "frequency 'daily' or 'weekly' repeats; 'once' does not"
+
+    Owner "1" *-- "0..*" Pet : owns
+    Pet "1" *-- "0..*" Task : needs
+    Scheduler "1" --> "1" Owner : plans for
+    Scheduler ..> Pet : completes tasks via
+    Scheduler ..> Task : sorts, fits, schedules
+    Task ..> Task : next_occurrence() creates
